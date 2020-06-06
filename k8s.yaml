@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hello-minikube
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-minikube-app
+  namespace: hello-minikube
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hello-minikube-app
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+      metadata:
+        labels:
+          app: hello-minikube-app
+      spec:
+          containers:
+            - name: hello-minikube-app
+              image: hello-minikube:test
+              imagePullPolicy: Never # building docker image inside minikube. not for production use
+              livenessProbe:
+                httpGet:
+                  path: /health
+                  port: 8080
+                initialDelaySeconds: 10
+                timeoutSeconds: 1
+              readinessProbe:
+                httpGet:
+                  path: /health
+                  port: 8080
+                initialDelaySeconds: 10
+                timeoutSeconds: 1
+              ports:
+                - name: http
+                  containerPort: 8080
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: hello-minikube-app
+  namespace: hello-minikube
+spec:
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 31995
+  selector:
+    app: hello-minikube-app
+  type: LoadBalancer
+  sessionAffinity: None
+  externalTrafficPolicy: Cluster
+status:
+  loadBalancer: {}
